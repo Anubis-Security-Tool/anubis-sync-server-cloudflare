@@ -22,7 +22,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     testTimeout: 30000, // Increase timeout to 30 seconds
-    hookTimeout: 30000, // Increase hook timeout too
+    hookTimeout: 65000,
     include: ['./tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}']
   }
 })

@@ -108,5 +108,7 @@ dist
 /electerm-sync.json
 .vercel
 .env.local
+.dev.vars
+.dev.vars.*
 
 .wrangler

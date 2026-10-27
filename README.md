@@ -55,7 +55,13 @@ Edit `wrangler.jsonc` and replace `YOUR_D1_DATABASE_ID` with the ID from step 2.
 npm run deploy
 ```
 
-**Then, in the Cloudflare worker settings, set JWT_SECRET and JWT_USERS (user1,user2...)**. Optionally bind the custom domain `sync.anubis.locker`.
+In the Cloudflare worker settings, set `JWT_SECRET` to at least 32 random
+characters and set `JWT_USERS` to the allowed comma-separated user IDs.
+Alternatively use `npx wrangler secret put JWT_SECRET` and
+`npx wrangler secret put JWT_USERS`, entering values through the private
+interactive prompt rather than command arguments. Unconfigured protected
+routes return HTTP 503; there is no shared development signing key or default
+user allowlist. Optionally bind the custom domain `sync.anubis.locker`.
 
 ## API Endpoints
 
@@ -80,13 +86,21 @@ The token must contain an `id` claim matching one of the user IDs in the `JWT_US
 npm start
 ```
 
+First apply the local D1 schema and create an owner-only `.dev.vars` containing
+your own `JWT_SECRET` and `JWT_USERS`; this file is ignored by Git. Local
+development does not create or configure a remote D1 database.
+
 ## Local test
 
 ```bash
 npm run test
 ```
 
-(Tests were not run as part of the rebranding; only names/URLs changed.)
+The tests create a private temporary configuration, apply the schema to an
+isolated local D1 database, start Wrangler on a free loopback port and clean up
+their own Worker process. They do not deploy, use your production bindings or
+write to a remote database. Authentication tests include missing configuration,
+expired tokens and rejected algorithms.
 
 ## Usage with Anubis-Security-Tool
 

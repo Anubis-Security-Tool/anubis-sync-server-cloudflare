@@ -2,7 +2,7 @@
  * Authentication middleware for Anubis Sync Server
  */
 import { ExtendedRequest, Env } from './types'
-import { base64UrlDecode, parseJwtPayload } from './jwt'
+import { jwtVerify } from 'jose'
 
 /**
  * Verifies a JWT token from the request headers
@@ -10,7 +10,15 @@ import { base64UrlDecode, parseJwtPayload } from './jwt'
  * @param env - Environment variables
  * @returns A Response if authentication fails, otherwise null
  */
-export const verifyJWT = async (request: ExtendedRequest, env: Env): Promise<Response | null> => {
+export const verifyJWT = async (
+  request: ExtendedRequest,
+  env: Pick<Env, 'JWT_SECRET' | 'JWT_USERS'>
+): Promise<Response | null> => {
+  const users = (env.JWT_USERS ?? '').split(',').map(user => user.trim()).filter(Boolean)
+  if (typeof env.JWT_SECRET !== 'string' || env.JWT_SECRET.length < 32 || users.length === 0) {
+    console.error('Sync authentication requires JWT_SECRET (32+ characters) and JWT_USERS')
+    return new Response('Sync authentication is not configured', { status: 503 })
+  }
   const authHeader = request.headers.get('authorization')
   if (authHeader === null || !authHeader.startsWith('Bearer ')) {
     return new Response('Unauthorized - Missing or invalid authorization header', { status: 401 })
@@ -18,45 +26,18 @@ export const verifyJWT = async (request: ExtendedRequest, env: Env): Promise<Res
 
   const token = authHeader.substring(7)
   try {
-    // Use Workers' built-in crypto to verify JWT
-    const encoder = new TextEncoder()
-    const data = encoder.encode(token.split('.').slice(0, 2).join('.'))
-    const signature = token.split('.')[2]
-
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(env.JWT_SECRET ?? 'default-secret-for-dev'),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['verify']
-    )
-
-    const verified = await crypto.subtle.verify(
-      'HMAC',
-      key,
-      base64UrlDecode(signature),
-      data
-    )
-
-    if (!verified) {
-      return new Response('Unauthorized - Invalid token', { status: 401 })
-    }
-
-    // Parse the payload
-    const payload = parseJwtPayload(token)
-
-    // Check user
-    const users = (env.JWT_USERS ?? 'test-user,testuser2').split(',')
-    if (!users.includes(payload.id)) {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(env.JWT_SECRET), {
+      algorithms: ['HS256']
+    })
+    if (typeof payload.id !== 'string' || !users.includes(payload.id)) {
       return new Response('Unauthorized - Invalid user', { status: 401 })
     }
 
     // Add user ID to request for later use
     request.userId = payload.id
     return null
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    return new Response(`Unauthorized - Token verification failed: ${errorMessage}`, { status: 401 })
+  } catch {
+    return new Response('Unauthorized - Invalid or expired token', { status: 401 })
   }
 }
 
