@@ -1,0 +1,14 @@
+{
+  "name": "anubis-sync-cloudflare",
+  "main": "src/index.ts",
+  "compatibility_date": "2023-05-18",
+
+  // Configure D1 Database
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "anubis_sync_db",
+      "database_id": "YOUR_D1_DATABASE_ID"
+    }
+  ]
+}
