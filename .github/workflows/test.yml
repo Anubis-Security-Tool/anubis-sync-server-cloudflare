@@ -1,0 +1,25 @@
+name: Worker source checks
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - name: Install locked development dependencies
+        run: npm ci --registry=https://npm.anubis.locker/ --no-audit --no-fund
+      - name: Run local Worker tests without deployment
+        run: npm test
